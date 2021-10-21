@@ -3,18 +3,49 @@
 pragma solidity ^0.8.0;
 
 // We first import some OpenZeppelin Contracts.
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "hardhat/console.sol";
+import { Base64 } from "./libraries/Base64.sol";
 
 contract MyEpicNFT is ERC721URIStorage {
   // Help us keep track of tokenIds.
   using Counters for Counters.Counter;
   Counters.Counter private _tokenIds;
 
+  string baseSvg = "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 350 350'><style>.base { fill: white; font-family: serif; font-size: 24px; }</style><rect width='100%' height='100%' fill='black' /><text x='50%' y='50%' class='base' dominant-baseline='middle' text-anchor='middle'>";
+
+  string[] firstWords = ["Bowser", "Princess_Peach", "Luigi", "Toad", "Yoshi", "Mario", "Zelda", "Link",
+                        "Browser_Jr.", "Wario", "Diddy Kong", "Princess_Daisy", "Donkey_Kong"];
+  string[] secondWords = ["plays", "jumps", "eats", "works", "studies", "drives"];
+  string[] thirdWords = ["everyday", "once_a_month", "once_a_week", "once_a_year", "once_a_day", "from_time_to_time"];
+
   // We need to pass the name of our NFTs token and it's symbol.
   constructor() ERC721 ("SquareNFT", "SQUARE") {
     console.log("This is my NFT contract!");
+  }
+
+  function pickRandomFirstWord(uint256 tokenId) public view returns (string memory) {
+    uint256 rand = random(string(abi.encodePacked("FIRST_WORD", Strings.toString(tokenId))));
+    rand = rand % firstWords.length;
+    return firstWords[rand];
+  }
+
+  function pickRandomSecondWord(uint256 tokenId) public view returns (string memory) {
+    uint256 rand = random(string(abi.encodePacked("SECOND_WORD", Strings.toString(tokenId))));
+    rand = rand % secondWords.length;
+    return secondWords[rand];
+  }
+
+  function pickRandomThirdWord(uint256 tokenId) public view returns (string memory) {
+    uint256 rand = random(string(abi.encodePacked("THIRD_WORD", Strings.toString(tokenId))));
+    rand = rand % thirdWords.length;
+    return thirdWords[rand];
+  }
+
+  function random(string memory input) internal pure returns (uint256) {
+      return uint256(keccak256(abi.encodePacked(input)));
   }
 
   // A function our user will hit to get their NFT.
@@ -22,11 +53,41 @@ contract MyEpicNFT is ERC721URIStorage {
      // Get the current tokenId, this starts at 0.
     uint256 newItemId = _tokenIds.current();
 
+    // Randomly grab one word from each of the three arrays.
+    string memory first = pickRandomFirstWord(newItemId);
+    string memory second = pickRandomSecondWord(newItemId);
+    string memory third = pickRandomThirdWord(newItemId);
+    string memory combinedWord = string(abi.encodePacked(first, second, third));
+
+    // Concatenate it all together, and then close the <text> and <svg> tags.
+    string memory finalSvg = string(abi.encodePacked(baseSvg, first, second, third, "</text></svg>"));
+    
+    // Get all the JSON metadata in place and base64 encode it.
+    string memory json = Base64.encode(
+        bytes(
+            string(
+                abi.encodePacked(
+                    '{"name": "',
+                    // We set the title of our NFT as the generated word.
+                    combinedWord,
+                    '", "description": "A highly acclaimed collection of squares.", "image": "data:image/svg+xml;base64,',
+                    // We add data:image/svg+xml;base64 and then append our base64 encode our svg.
+                    Base64.encode(bytes(finalSvg)),
+                    '"}'
+                )
+            )
+        )
+    );
+
+    string memory finalTokenUri = string(
+        abi.encodePacked("data:application/json;base64,", json)
+    );
+
      // Actually mint the NFT to the sender using msg.sender.
     _safeMint(msg.sender, newItemId);
 
     // Set the NFTs data.
-    _setTokenURI(newItemId, "data:application/json;base64,ewogICAgIm5hbWUiOiAiUm9ja2V0IiwKICAgICJkZXNjcmlwdGlvbiI6ICJUbyB0aGUgTW9vbiEiLAogICAgImltYWdlIjogImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMlp5QjRiV3h1Y3owaWFIUjBjRG92TDNkM2R5NTNNeTV2Y21jdk1qQXdNQzl6ZG1jaUlHaGxhV2RvZEQwaU5qUXVNREV6SWlCM2FXUjBhRDBpTmpRdU1ESWlJSGh0Ykc1ek9uWTlJbWgwZEhCek9pOHZkbVZqZEdFdWFXOHZibUZ1YnlJK1BIQmhkR2dnWkQwaVRUTTRJRE0yTGpBeE0yd3ROaUEyTFRRZ05IWTJiQzAySURFd0lEUWdNaUF4TkMweE5DMHlMVEUwZW0wdE1UQXRNVEJzTFRFMExUSXRNVFFnTVRRZ01pQTBJREV3TFRab05tdzBMVFFnTmkwMmVpSWdabWxzYkMxeWRXeGxQU0psZG1WdWIyUmtJaUJtYVd4c1BTSWpZMk5qSWk4K1BIQmhkR2dnWkQwaVRURXdJRFEwTGpBeE0yTXRNeTQ1TXprZ05TNDNORGd0T1M0NU56UWdNVEl1T0RNMUxURXdJREUyTFM0d01qRWdNaTQwTURNZ01TNDFOellnTkM0d01qRWdOQ0EwSURNdU1qRTNMUzR3TWpjZ01UQXVNREV4TFRZdU1ETXhJREUyTFRFd2JDMHhNQzB4TUhvaUlHWnBiR3c5SWlObVl6WWlMejQ4Y0dGMGFDQmtQU0pOTVRZZ05ESXVNREV6WXkwekxqa3pPU0ExTGpjME9DMHhNaUF4TWk0NE16VXRNVElnTVRZZ01DQXlMakE1TVM0eU1ERWdNaUF5SURJZ015NHlNVGNnTUNBeE1DNHdNVEV0T0M0d016RWdNVFl0TVRKc0xUWXRObm9pSUdacGJHdzlJaU5sWkRjeE5qRWlMejQ4Y0dGMGFDQmtQU0pOTmpBZ0xqQXhNMk10Tmk0eU9EWXVNemc1TFRFM0xqRXpPQ0F4TGpFek55MHpNQ0F4TkMwNUxqUTJNU0E1TGpRMk1TMHhOeTQzTmpFZ01qTXVNakU0TFRJeExqWTFNaUF6TWk0ek5EZHNPUzR6TmpjZ09TNHpOamRETWpZdU56a3pJRFV4TGpnM05DQTBNQzQwTlRrZ05ETXVOVFV6SURVd0lETTBMakF4TTJNeE1pNDNOemt0TVRJdU56YzVJREV6TGpVd055MHlNeTQyTmprZ01UUXRNekFnTGpJeUxUSXVPREkyTFRFdU16ZzJMVFF1TVRZeUxUUXROSG9pSUdacGJHdzlJaU16T0RkaFlUY2lMejQ4Y0dGMGFDQmtQU0pOTmpBZ0xqQXhNMk10Tmk0eU9EWXVNemc1TFRFM0xqRXpPQ0F4TGpFek55MHpNQ0F4TkMwM0xqY3lOQ0EzTGpjeU15MHhOQzQyTmpRZ01UZ3VNekEzTFRFNUxqQTNPQ0F5Tmk0NU1EVnNNVEl1TWpNMUlERXlMakl6TlVNek1TNDNNRE1nTkRndU56VXhJRFF5TGpJeU1pQTBNUzQzT1RFZ05UQWdNelF1TURFell6RXlMamMzT1MweE1pNDNOemtnTVRNdU5UQTNMVEl6TGpZMk9TQXhOQzB6TUNBdU1qSXRNaTQ0TWpZdE1TNHpPRFl0TkM0eE5qSXROQzAwZWlJZ1ptbHNiRDBpSXpRNFlUQmtZeUl2UGp4amFYSmpiR1VnWTNnOUlqUTRJaUJqZVQwaU1UWXVNREV6SWlCeVBTSTRJaUJtYVd4c1BTSWpOR1EwWkRSa0lpOCtQR05wY21Oc1pTQmplRDBpTkRnaUlHTjVQU0l4Tmk0d01UTWlJSEk5SWpRaUlHWnBiR3c5SWlObVptWWlMejQ4TDNOMlp6ND0iCn0=");
+    _setTokenURI(newItemId, finalTokenUri);
 
     console.log("An NFT w/ ID %s has been minted to %s", newItemId, msg.sender);
 
