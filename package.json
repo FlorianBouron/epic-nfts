@@ -4,7 +4,7 @@
   "description": "Project which generate EPIC NFTs on ETH",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "yarn workspace frontend start"
   },
   "repository": {
     "type": "git",

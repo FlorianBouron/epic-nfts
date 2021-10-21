@@ -1,26 +1,30 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import './styles/App.css';
 
-function App() {
+// Constants
+const OPENSEA_LINK = '';
+const TOTAL_MINT_COUNT = 50;
+
+const App = () => {
+  // Render Methods
+  const renderNotConnectedContainer = () => (
+    <button className="cta-button connect-wallet-button">
+      Connect to Wallet
+    </button>
+  );
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <div className="container">
+        <div className="header-container">
+          <p className="header gradient-text">My NFT Collection</p>
+          <p className="sub-text">
+            Each unique. Each beautiful. Discover your NFT today.
+          </p>
+          {renderNotConnectedContainer()}
+        </div>
+      </div>
     </div>
   );
-}
+};
 
 export default App;
