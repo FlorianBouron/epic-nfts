@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { ethers } from "ethers";
+import myEpicNft from './utils/MyEpicNFT.json';
 import './styles/App.css';
 
 // Constants
-const OPENSEA_LINK = '';
+const OPENSEA_LINK = 'https://testnets.opensea.io/assets/';
 const TOTAL_MINT_COUNT = 50;
 
 const App = () => {
@@ -43,6 +45,27 @@ const App = () => {
     }
   }
 
+  const askContractToMintNft = async () => {
+    const CONTRACT_ADDRESS = "0xFB7af74eb60A9C52bC343dbA5f97a4AA4Cefe731";
+      try {
+        const { ethereum } = window;
+  
+        if (ethereum) {
+          const provider = new ethers.providers.Web3Provider(ethereum);
+          const signer = provider.getSigner();
+          const connectedContract = new ethers.Contract(CONTRACT_ADDRESS, myEpicNft.abi, signer);
+  
+          const nftTxn = await connectedContract.makeAnEpicNFT();
+          await nftTxn.wait();
+          
+          console.log(`Mined, see transaction: https://rinkeby.etherscan.io/tx/${nftTxn.hash}`);
+  
+        }
+      } catch (error) {
+        console.log(error)
+      }
+  }
+
   useEffect(() => {
     checkIfWalletIsConnected();
   }, [])
@@ -60,7 +83,7 @@ const App = () => {
               Connect to Wallet
             </button>
           ) : (
-            <button className="cta-button connect-wallet-button">
+            <button onClick={askContractToMintNft} className="cta-button connect-wallet-button">
               Mint NFT
             </button>
           )}
