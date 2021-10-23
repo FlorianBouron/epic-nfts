@@ -24,11 +24,13 @@ contract MyEpicNFT is ERC721URIStorage {
 
   string[] colors = ["red", "#08C2A8", "black", "yellow", "blue", "green"];
 
-  event NewEpicNFTMinted(address sender, uint256 tokenId);
+  uint8 private _maxTokens;
+  event NewEpicNFTMinted(address sender, uint256 tokenId, uint remaining);
 
   // We need to pass the name of our NFTs token and it's symbol.
-  constructor() ERC721 ("SquareNFT", "SQUARE") {
-    console.log("This is my NFT contract!");
+  constructor(uint8 maxTokens) ERC721 ("SquareNFT", "SQUARE") {
+    _maxTokens = maxTokens;
+    console.log("NFT Contract with %n max", maxTokens);
   }
 
   function pickRandomFirstWord(uint256 tokenId) public view returns (string memory) {
@@ -59,10 +61,16 @@ contract MyEpicNFT is ERC721URIStorage {
       return uint256(keccak256(abi.encodePacked(input)));
   }
 
+  function remainingEpicNFTs() public view returns (uint) { 
+    return _maxTokens - _tokenIds.current();
+  }
+
   // A function our user will hit to get their NFT.
   function makeAnEpicNFT() public {
      // Get the current tokenId, this starts at 0.
     uint256 newItemId = _tokenIds.current();
+
+    require(newItemId < _maxTokens, "NFTs all gone");
 
     // Randomly grab one word from each of the three arrays.
     string memory first = pickRandomFirstWord(newItemId);
@@ -108,6 +116,6 @@ contract MyEpicNFT is ERC721URIStorage {
     // Increment the counter for when the next NFT is minted.
     _tokenIds.increment();
 
-    emit NewEpicNFTMinted(msg.sender, newItemId);
+    emit NewEpicNFTMinted(msg.sender, newItemId, _maxTokens - (newItemId + 1));
   }
 }
